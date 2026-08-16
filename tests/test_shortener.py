@@ -10,15 +10,23 @@ class TestURLShortener(unittest.TestCase):
         self.assertEqual(len(res["code"]), 6)
         self.assertEqual(res["original_url"], "https://github.com/msyahirmahmud")
 
+    def test_custom_alias_shorten(self):
+        service = URLShortenerService()
+        res = service.shorten_url("https://github.com/msyahirmahmud", custom_alias="my-github")
+        self.assertEqual(res["code"], "my-github")
+        self.assertEqual(res["short_url"], "http://short.ly/my-github")
+
+    def test_duplicate_custom_alias_raises_error(self):
+        service = URLShortenerService()
+        service.shorten_url("https://github.com", custom_alias="my-github")
+        with self.assertRaises(ValueError):
+            service.shorten_url("https://python.org", custom_alias="my-github")
+
     def test_link_expiration_ttl(self):
         service = URLShortenerService()
         res = service.shorten_url("https://expiring-link.com", ttl_seconds=1)
         code = res["code"]
-        
-        # Immediate redirect works
         self.assertEqual(service.redirect_code(code), "https://expiring-link.com")
-        
-        # Wait 1.1s for expiration
         time.sleep(1.1)
         self.assertTrue(service.is_expired(code))
         self.assertIsNone(service.redirect_code(code))
@@ -27,10 +35,8 @@ class TestURLShortener(unittest.TestCase):
         service = URLShortenerService()
         res = service.shorten_url("https://python.org")
         code = res["code"]
-        
         redirect_target = service.redirect_code(code)
         self.assertEqual(redirect_target, "https://python.org")
-        
         stats = service.get_analytics(code)
         self.assertEqual(stats["clicks"], 1)
 

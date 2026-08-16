@@ -9,13 +9,20 @@ class URLShortenerService:
     def __init__(self):
         self.db = {} # code -> { original_url, clicks, created_at, expires_at }
 
-    def shorten_url(self, original_url: str, ttl_seconds: int = None) -> dict:
+    def shorten_url(self, original_url: str, custom_alias: str = None, ttl_seconds: int = None) -> dict:
         if not original_url or not (original_url.startswith('http://') or original_url.startswith('https://')):
             raise ValueError("Invalid URL format. Must start with http:// or https://")
 
+        if custom_alias:
+            alias = custom_alias.strip()
+            if alias in self.db:
+                raise ValueError("Custom alias already in use")
+            code = alias
+        else:
+            now = time.time()
+            code = hashlib.md5(f"{original_url}{now}".encode('utf-8')).hexdigest()[:6]
+
         now = time.time()
-        code = hashlib.md5(f"{original_url}{now}".encode('utf-8')).hexdigest()[:6]
-        
         expires_at = now + ttl_seconds if ttl_seconds else None
 
         entry = {
@@ -39,7 +46,7 @@ class URLShortenerService:
     def redirect_code(self, code: str) -> str:
         if code in self.db:
             if self.is_expired(code):
-                return None # Link expired
+                return None
             self.db[code]["clicks"] += 1
             return self.db[code]["original_url"]
         return None
