@@ -9,12 +9,17 @@ class URLShortenerService:
     def __init__(self):
         self.db = {} # code -> { original_url, clicks, created_at }
 
-    def shorten_url(self, original_url: str) -> dict:
+    def shorten_url(self, original_url: str, custom_alias: str = None) -> dict:
         if not original_url or not (original_url.startswith('http://') or original_url.startswith('https://')):
             raise ValueError("Invalid URL format. Must start with http:// or https://")
 
-        # Generate 6-char hash code
-        code = hashlib.md5(f"{original_url}{time.time()}".encode('utf-8')).hexdigest()[:6]
+        if custom_alias:
+            alias = custom_alias.strip()
+            if alias in self.db:
+                raise ValueError("Custom alias already in use")
+            code = alias
+        else:
+            code = hashlib.md5(f"{original_url}{time.time()}".encode('utf-8')).hexdigest()[:6]
         
         entry = {
             "code": code,
